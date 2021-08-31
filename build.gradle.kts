@@ -1,7 +1,7 @@
 @file:Suppress("UNUSED_VARIABLE")
 
 plugins {
-    kotlin("multiplatform") version "1.5.10"
+    kotlin("multiplatform") version "1.5.30-RC"
 }
 
 group = "city.windmill"
@@ -21,7 +21,19 @@ kotlin {
         else -> throw GradleException("Host OS is not supported in Kotlin/Native.")
     }
 
-    
+    val jni by nativeTarget.compilations.getByName("main").cinterops.creating {
+        defFile(project.file("src/nativeMain/resources/jni/jni.def"))
+        headers(
+            project.files(
+                "src/nativeMain/resources/jni/jni.h",
+                "src/nativeMain/resources/jni/jni_md.h"
+            )
+        )
+        packageName("native.jni")
+    }
+
+
+
     sourceSets {
         val commonMain by getting
         val commonTest by getting {
@@ -30,6 +42,9 @@ kotlin {
             }
         }
         val nativeMain by getting
-        val nativeTest by getting
+        val nativeTest by getting {
+            //Set the working path to where the jvm library locates, or cause failure in JavaVM.create
+            tasks["nativeTest"].setProperty("workingDir", "${System.getenv("JAVA_HOME")}/bin/default")
+        }
     }
 }

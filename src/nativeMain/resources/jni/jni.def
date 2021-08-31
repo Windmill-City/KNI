@@ -1,0 +1,1 @@
+linkerOpts = -Lsrc/nativeMain/resources/jni -ljvm
