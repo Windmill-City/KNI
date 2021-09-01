@@ -78,7 +78,7 @@ class JString(override val obj: jstring) : JObject(obj) {
         memScoped {
             val copied: jbooleanVar = this.alloc()
             val jStr = fGetStr.invoke(env.internalEnv, obj, copied.ptr)
-                ?: throw OutOfMemoryError("Using Unicode String")
+                ?: throw OutOfMemoryError("Using MUTF-8 String")
             try {
                 return action(jStr, getByteLenMU8(env), copied.value.toBoolean())
             } finally {
@@ -88,7 +88,7 @@ class JString(override val obj: jstring) : JObject(obj) {
     }
 
     /**
-     * Use [JString] in Unicode format
+     * Use [JString] in UTF-16 format
      *
      * @param critical if GetStringCritical
      * @param action CPointer<ByteVar>.(len: Int, copied: Boolean), pointer points to the string, len is the length
@@ -107,7 +107,7 @@ class JString(override val obj: jstring) : JObject(obj) {
         memScoped {
             val copied: jbooleanVar = this.alloc()
             val jStr = fGetStr.invoke(env.internalEnv, obj, copied.ptr)
-                ?: throw OutOfMemoryError("Using Unicode String")
+                ?: throw OutOfMemoryError("Using UTF-16 String")
             try {
                 return action(jStr, getLen(env), copied.value.toBoolean())
             } finally {
