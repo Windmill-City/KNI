@@ -49,7 +49,7 @@ class TestJValue {
         TestVM.vm.useEnv {
             localFrame {
                 val strClz = JClass.findClass(this, "java/lang/String")
-                assertTrue { strClz.isSameObj(this, strClz.asJValue().useContents { asJObject<JClass>() }) }
+                assertTrue { strClz.isSameObj(this, strClz.asJValue().useContents { asJObject() }) }
             }
         }
     }
@@ -59,7 +59,7 @@ class TestJValue {
         arrayOfNulls<Any?>(16).apply {
             memScoped {
                 val array = this@apply.toJValues(this)
-                this@apply.onEachIndexed { i, it -> assertEquals(it, array[i].asJObject<JClass>()) }
+                this@apply.onEachIndexed { i, it -> assertEquals(it, array[i].asJObject()) }
             }
         }
     }

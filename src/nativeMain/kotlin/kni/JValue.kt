@@ -1,7 +1,6 @@
 package kni
 
 import kni.jobject.JObject
-import kni.jobject.createJObj
 import kotlinx.cinterop.*
 import native.jni.JNI_FALSE
 import native.jni.JNI_TRUE
@@ -131,7 +130,7 @@ fun jvalue.asDouble(): Double {
 /**
  * Cast [jvalue] to [JObject]
  */
-inline fun <reified T : JObject> jvalue.asJObject(): T? {
-    return this.l?.let { createJObj(it) }
+inline fun jvalue.asJObject(): JObject? {
+    return this.l?.let { JObject(it) }
 }
 //endregion
