@@ -38,13 +38,10 @@ class JString(override val obj: jstring) : JObject(obj) {
      *
      * @param start start index of the region, inclusive
      * @param len the length of string to get start from the start index
-     *
-     * @throws IndexOutOfBoundsException when start or len are out of range, also a pending exception in VM
      */
     fun getRegionMU8(env: JEnv, placement: NativePlacement, start: Int, len: Int): CArrayPointer<ByteVar> {
         val buf = placement.allocArray<ByteVar>(len)
         env.nativeInf.GetStringUTFRegion!!.invoke(env.internalEnv, obj, start, len, buf)
-        if (env.checkException()) throw IndexOutOfBoundsException("Getting String Region:start:$start, len:$len")
         return buf
     }
 
@@ -53,13 +50,10 @@ class JString(override val obj: jstring) : JObject(obj) {
      *
      * @param start start index of the region, inclusive
      * @param len the length of string to get start from the start index
-     *
-     * @throws IndexOutOfBoundsException when start or len are out of range, also a pending exception in VM
      */
     fun getRegion(env: JEnv, placement: NativePlacement, start: Int, len: Int): CArrayPointer<UShortVar> {
         val buf = placement.allocArray<UShortVar>(len)
         env.nativeInf.GetStringRegion!!.invoke(env.internalEnv, obj, start, len, buf)
-        if (env.checkException()) throw IndexOutOfBoundsException("Getting String Region:start:$start, len:$len")
         return buf
     }
 
