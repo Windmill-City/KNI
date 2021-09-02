@@ -121,6 +121,13 @@ class JString(override val obj: jstring) : JObject(obj) {
 }
 
 /**
+ * Convert [JObject] to [JString]
+ */
+fun JObject.asJString(): JString {
+    return JString(obj)
+}
+
+/**
  * Convert Modified UTF-8 C string to [JString]
  *
  * @throws OutOfMemoryError when system runs out of memory, also a pending exception in VM

@@ -15,12 +15,13 @@ class TestJString {
     )
 
     @Test
-    fun testNewRefTo() {
+    fun testCast() {
         with(TestVM.vm) {
             useEnv {
                 localFrame {
                     with("Test".toJString(this)) {
-                        newRefTo(this.obj)
+                        newRefTo(obj)
+                        asJString()
                     }
                 }
             }
