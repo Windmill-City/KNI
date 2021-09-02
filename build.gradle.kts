@@ -1,7 +1,7 @@
 @file:Suppress("UNUSED_VARIABLE")
 
 plugins {
-    kotlin("multiplatform") version "1.5.30-RC"
+    kotlin("multiplatform") version "1.5.30"
 }
 
 group = "city.windmill"
