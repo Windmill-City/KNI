@@ -1,6 +1,7 @@
 package kni.jobject
 
 import kni.JEnv
+import kni.VMOutOfMemoryException
 import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.invoke
 
@@ -36,14 +37,14 @@ class JDirectBuffer(ref: JRef) : JObject(ref) {
         /**
          * Create [JDirectBuffer]
          *
-         * @throws OutOfMemoryError if system runs out of memory, also a pending exception in VM
+         * @throws VMOutOfMemoryException
          * @throws UnsupportedOperationException if VM does not support
          */
         fun create(env: JEnv, address: COpaquePointer, capacity: Long): JDirectBuffer {
             return JDirectBuffer(
                 JRefLocal(
                     env.nativeInf.NewDirectByteBuffer!!.invoke(env.internalEnv, address, capacity)
-                        ?: if (env.checkException()) throw OutOfMemoryError("Creating direct buffer")
+                        ?: if (env.checkException()) throw VMOutOfMemoryException("Creating direct buffer")
                         else throw UnsupportedOperationException("This VM does not support JNI access to direct buffer")
                 )
             )

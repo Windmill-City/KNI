@@ -1,6 +1,8 @@
 package kni.jobject
 
 import kni.JEnv
+import kni.JNIError
+import kni.VMOutOfMemoryException
 import kni.toBoolean
 import kotlinx.cinterop.*
 import native.jni.*
@@ -130,7 +132,8 @@ class JArray(ref: JRef) : JObject(ref) {
      *
      * @param T can be one of primitive types of VM
      *
-     * @throws OutOfMemoryError if system runs out of memory, also a pending exception in VM
+     * @throws VMOutOfMemoryException
+     * @throws IllegalArgumentException if not primitive types
      */
     inline fun <reified T, reified TVar : CPrimitiveVar> useAs(
         env: JEnv,
@@ -176,7 +179,7 @@ class JArray(ref: JRef) : JObject(ref) {
                 @Suppress("UNCHECKED_CAST") val arr =
                     (first as CPointer<CFunction<(CPointer<JNIEnvVar>, jarray, CPointer<jbooleanVar>) -> CPointer<CPrimitiveVar>?>>)
                         .invoke(env.internalEnv, ref.obj, isCopied.ptr)
-                        ?: throw OutOfMemoryError("Using primitive array elements of type:${T::class.qualifiedName}")
+                        ?: throw VMOutOfMemoryException("Using primitive array elements of type:${T::class.qualifiedName}")
                 val mode =
                     try {
                         action(arr.reinterpret(), this@JArray.getLen(env), isCopied.value.toBoolean())
@@ -192,6 +195,8 @@ class JArray(ref: JRef) : JObject(ref) {
 
     /**
      * Use primitive array in critical mode, and free it after use
+     *
+     * @throws VMOutOfMemoryException
      */
     @Suppress("UNCHECKED_CAST")
     inline fun <reified TVar : CPrimitiveVar> useCriticalAs(
@@ -203,7 +208,7 @@ class JArray(ref: JRef) : JObject(ref) {
         memScoped {
             val isCopied: jbooleanVar = this.alloc()
             val arr = fGetArr.invoke(env.internalEnv, ref.obj, isCopied.ptr)
-                ?: throw OutOfMemoryError("Using primitive array elements of type:${TVar::class.qualifiedName}")
+                ?: throw VMOutOfMemoryException("Using primitive array elements of type:${TVar::class.qualifiedName}")
             val mode =
                 try {
                     action(arr.reinterpret(), this@JArray.getLen(env), isCopied.value.toBoolean())
@@ -220,7 +225,8 @@ class JArray(ref: JRef) : JObject(ref) {
          *
          * @param T can be one of primitive types of VM
          *
-         * @throws Error on failure, also a pending exception in VM
+         * @throws VMOutOfMemoryException
+         * @throws IllegalArgumentException if not primitive types
          */
         inline fun <reified T> arrayOf(env: JEnv, len: Int): JArray {
             return JArray(
@@ -251,7 +257,7 @@ class JArray(ref: JRef) : JObject(ref) {
                             env.nativeInf.NewDoubleArray!!.invoke(env.internalEnv, len)
                         }
                         else -> throw IllegalArgumentException("Unsupported type:${T::class.qualifiedName}")
-                    } ?: throw Error("Creating primitive array of type:${T::class.qualifiedName}")
+                    } ?: throw VMOutOfMemoryException("Creating primitive array of type:${T::class.qualifiedName}")
                 )
             )
         }
