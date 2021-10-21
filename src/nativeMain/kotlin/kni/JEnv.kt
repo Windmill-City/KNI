@@ -43,7 +43,7 @@ class JEnv(val internalEnv: InternalEnv) {
      *
      * @param capacity ensure at least given number of local refs can be created
      *
-     * @throws VMOutOfMemoryException if system out of memory, also a pending exception in VM
+     * @throws VMOutOfMemoryException
      */
     fun pushLocalFrame(capacity: Int = 0) {
         nativeInf.PushLocalFrame!!.invoke(internalEnv, capacity)
@@ -60,7 +60,7 @@ class JEnv(val internalEnv: InternalEnv) {
     /**
      * Ensure at least given number of local refs can be created
      *
-     * @throws VMOutOfMemoryException if system out of memory, also a pending exception in VM
+     * @throws VMOutOfMemoryException
      */
     fun ensureLocalCapacity(capacity: Int) {
         nativeInf.EnsureLocalCapacity!!.invoke(internalEnv, capacity)
@@ -73,6 +73,8 @@ class JEnv(val internalEnv: InternalEnv) {
      * @param clz class to register method
      * @param methods array of [JNINativeMethod]
      * @param len array length of the [methods]
+     *
+     * @throws JNIError on failure
      */
     fun registerNatives(clz: JClass, methods: CPointer<JNINativeMethod>, len: Int) {
         nativeInf.RegisterNatives!!.invoke(internalEnv, clz.ref.obj, methods, len)
@@ -83,6 +85,8 @@ class JEnv(val internalEnv: InternalEnv) {
      * Unregister native method
      *
      * @param clz class to unregister method
+     *
+     * @throws JNIError on failure
      */
     fun unregisterNatives(clz: JClass) {
         nativeInf.UnregisterNatives!!.invoke(internalEnv, clz.ref.obj).succeedOrThr("Unregistering native methods")

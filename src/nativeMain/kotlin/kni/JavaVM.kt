@@ -126,7 +126,7 @@ class JavaVM(val internalVM: InternalVM, val envVer: JVersion) {
      *
      * @param version JNI version
      *
-     * @throws Error on unsupported JNI version
+     * @throws JNIError on unsupported JNI version
      */
     fun getEnv(version: JVersion = this.envVer): JEnv? {
         memScoped {
