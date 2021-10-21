@@ -1,6 +1,6 @@
 package kni
 
-import kni.jobject.JObject
+import kni.jobject.*
 import kotlinx.cinterop.*
 import native.jni.JNI_FALSE
 import native.jni.JNI_TRUE
@@ -44,7 +44,7 @@ fun Array<out Any?>.toJValues(scope: AutofreeScope): CPointer<jvalue> {
 }
 
 /**
- * Convert Kotlin Obj to [jvalue]
+ * Convert Kotlin types to [jvalue]
  */
 inline fun <reified T> T.asJValue(): CValue<jvalue> {
     return cValue {
@@ -58,7 +58,8 @@ inline fun <reified T> T.asJValue(): CValue<jvalue> {
             is Long -> j = this@asJValue
             is Float -> f = this@asJValue
             is Double -> d = this@asJValue
-            is JObject -> l = this@asJValue.obj
+            is JRef -> l = this@asJValue.obj
+            is JObject -> l = this@asJValue.ref.obj
             else -> throw IllegalArgumentException("Unsupported Convention:${this@asJValue!!::class.qualifiedName} to ${jvalue::class.qualifiedName}")
         }
     }
@@ -128,9 +129,16 @@ fun jvalue.asDouble(): Double {
 }
 
 /**
- * Cast [jvalue] to [JObject]
+ * Cast [jvalue] to [JRefLocal]
  */
-inline fun jvalue.asJObject(): JObject? {
-    return this.l?.let { JObject(it) }
+inline fun <reified T : JRef> jvalue.asJRef(): JRef? {
+    return this.l?.let {
+        when (T::class) {
+            JRefLocal::class -> JRefLocal(it)
+            JRefGlobal::class -> JRefGlobal(it)
+            JRefWeak::class -> JRefWeak(it)
+            else -> throw IllegalArgumentException("Unsupported JRef:${T::class.qualifiedName}")
+        }
+    }
 }
 //endregion

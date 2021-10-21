@@ -18,6 +18,6 @@ object TestVM {
             vm = JavaVM.create(this)
         }
         this.vm = vm
-        println("JNI version of JavaVM:${vm.version.toJVerStr()}")
+        println("JNI version of JavaVM:${vm.envVer.toJVerStr()}")
     }
 }

@@ -11,7 +11,7 @@ class TestJEnv {
     fun testGetVersion() {
         with(TestVM.vm) {
             useEnv {
-                assertEquals(this@with.version, getVersion())
+                assertEquals(this@with.envVer, getVersion())
             }
         }
     }
@@ -29,15 +29,22 @@ class TestJEnv {
     fun testLocalFrame() {
         with(TestVM.vm) {
             useEnv {
-                pushLocalFrame(10)
-                ensureLocalCapacity(10)
-                popLocalFrame()
-
                 localFrame {
+                    ensureLocalCapacity(10)
                     JClass.findClass(this, "java/lang/String")
                 }.apply {
-                    assertEquals(JNIInvalidRefType, getObjRefType(this@useEnv))
+                    assertEquals(JNIInvalidRefType, ref.getObjRefType(this@useEnv))
                 }
+            }
+        }
+    }
+
+    @Ignore
+    @Test
+    fun testRegAndUnRegNatives() {
+        with(TestVM.vm){
+            useEnv {
+                TODO()
             }
         }
     }

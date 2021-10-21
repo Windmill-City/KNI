@@ -5,6 +5,9 @@ import native.jni.*
 import platform.posix.snprintf
 
 typealias InternalVM = CPointer<JavaVMVar>
+/**
+ * JNI Version
+ */
 typealias JVersion = jint
 
 /**
@@ -24,29 +27,31 @@ fun JVersion.toJVerStr(): String {
 }
 
 /**
- * Do action with Default VM Init Args
+ * Get Default VM Init Args
  *
  * @param version the version expect the VM to support, VM will return the actual supported
  * version in [JavaVMInitArgs]
  *
- * @throws Error on failure
+ * @throws JNIError on failure
  */
-fun withVMInitArgs(version: JVersion = JNI_VERSION_10, action: (args: CValue<JavaVMInitArgs>) -> Unit) {
+fun getVMInitArgs(version: JVersion): CValue<JavaVMInitArgs> {
     val args = cValue<JavaVMInitArgs> {
         this.version = version
         JNI_GetDefaultJavaVMInitArgs(this.ptr).succeedOrThr("Getting Default VM Init Args")
     }
-    action(args)
+    return args
 }
 
 /**
- * Java VM - Share between threads within a process
+ * Java VM
  *
- * @param internalVM pointer to [JavaVMVar]
- * @param version JNI Version
+ * Share between threads within a process
+ *
+ * @param internalVM pointer to [native.jni.JavaVM]
+ * @param envVer Default [JVersion] to retrieve [JEnv]
  */
 @Suppress("MemberVisibilityCanBePrivate")
-class JavaVM(val internalVM: InternalVM, val version: JVersion) {
+class JavaVM(val internalVM: InternalVM, val envVer: JVersion) {
     val invokeInf: JNIInvokeInterface_ = internalVM.pointed.pointed!!
 
     companion object {
@@ -55,7 +60,7 @@ class JavaVM(val internalVM: InternalVM, val version: JVersion) {
          *
          * @param args init arguments of the VM
          *
-         * @throws Error on failure
+         * @throws JNIError on failure
          */
         @Suppress("NAME_SHADOWING")
         fun create(args: JavaVMInitArgs): JavaVM {
@@ -69,14 +74,14 @@ class JavaVM(val internalVM: InternalVM, val version: JVersion) {
     }
 
     /**
-     * The [destroy] function unloads a Java VM.
+     * Unloads the Java VM.
      *
      * The VM waits until the current thread is the only non-daemon user thread before it actually unloads.
      *
      * Even if you have destroyed the previous Java VM, you cannot recreate the Java VM on the same process,
      * this is by design!
      *
-     * @throws Error on failure
+     * @throws JNIError on failure
      */
     fun destroy() {
         invokeInf.DestroyJavaVM!!.invoke(internalVM).succeedOrThr("Destroying VM")
@@ -87,9 +92,9 @@ class JavaVM(val internalVM: InternalVM, val version: JVersion) {
      *
      * The native thread remains attached VM until it calls [detachCurrentThread]
      *
-     * @param args Attach argument, the name of it is in the format of Modified UTF-8
+     * @param args Attach argument, the name of which is in the format of Modified UTF-8
      *
-     * @throws Error on failure
+     * @throws JNIError on failure
      */
     fun attachCurrentThread(args: JavaVMAttachArgs? = null, asDaemon: Boolean = false): JEnv {
         memScoped {
@@ -99,7 +104,7 @@ class JavaVM(val internalVM: InternalVM, val version: JVersion) {
                 internalEnv.ptr.reinterpret(),
                 args?.ptr
             )
-                .succeedOrThr("Attaching thread with version:${args?.version?.toJVerStr()}, VM version:${version.toJVerStr()}")
+                .succeedOrThr("Attaching thread with version:${args?.version?.toJVerStr()}, VM version:${envVer.toJVerStr()}")
             return JEnv(internalEnv.value!!)
         }
     }
@@ -110,11 +115,10 @@ class JavaVM(val internalVM: InternalVM, val version: JVersion) {
      * A native thread attached to the VM must call [detachCurrentThread] to detach itself before exiting.
      * A thread cannot detach itself if there are Java methods on the call stack.
      *
-     * @throws Error on failure
+     * @throws JNIError on failure
      */
     fun detachCurrentThread() {
-        invokeInf.DetachCurrentThread!!.invoke(internalVM)
-            .succeedOrThr("Detaching thread")
+        invokeInf.DetachCurrentThread!!.invoke(internalVM).succeedOrThr("Detaching thread")
     }
 
     /**
@@ -124,23 +128,20 @@ class JavaVM(val internalVM: InternalVM, val version: JVersion) {
      *
      * @throws Error on unsupported JNI version
      */
-    fun getEnv(version: JVersion = this.version): JEnv? {
+    fun getEnv(version: JVersion = this.envVer): JEnv? {
         memScoped {
             val internalEnv: CPointerVar<JNIEnvVar> = this.alloc()
             invokeInf.GetEnv!!.invoke(internalVM, internalEnv.ptr.reinterpret(), version)
                 .ifFailed {
                     if (it == JNI_EDETACHED) return null
-                    it.succeedOrThr("Getting JEnv with version:${version.toJVerStr()}, VM version:${this@JavaVM.version.toJVerStr()}")
+                    it.succeedOrThr("Getting JEnv with version:${version.toJVerStr()}, VM version:${this@JavaVM.envVer.toJVerStr()}")
                 }
             return JEnv(internalEnv.value!!)
         }
     }
 
     /**
-     * [JEnv] scope, get [JEnv] of current thread, if null, then attach to VM to get [JEnv],
-     * and detach after returning
-     *
-     * @throws Error on failure
+     * [JEnv] scope
      */
     inline fun <R> useEnv(
         args: JavaVMAttachArgs? = null,

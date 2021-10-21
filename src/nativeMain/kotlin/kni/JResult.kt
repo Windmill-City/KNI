@@ -3,7 +3,7 @@ package kni
 import native.jni.*
 
 /**
- * Return value of the JNI method
+ * Return value of a JNI call
  */
 typealias JResult = jint
 
@@ -27,30 +27,46 @@ val namedJResult = mapOf(
 inline val JResult.succeed: Boolean get() = this == JNI_OK
 
 /**
- * Do action if succeed
+ * Do action if JNI call succeed
  */
 inline fun JResult.ifSucceed(action: (JResult) -> Unit) {
     if (succeed) action(this)
 }
 
 /**
- * Do action if failed
+ * Do action if JNI call failed
  */
 inline fun JResult.ifFailed(action: (JResult) -> Unit) {
     if (!succeed) action(this)
 }
 
 /**
- * Throw an exception if it fails
- *
- * @throws OutOfMemoryError if it is [JNI_ENOMEM]
- * @throws Error on failure
+ * Throws when a JNI call failed
  */
-fun JResult.succeedOrThr(message: String = "Failed") {
+open class JNIError(result: JResult, message: String?) :
+    Error("$message->JResult:${namedJResult.getOrElse(result) { "$result" }}")
+
+/**
+ * Throws when there is a pending exception in VM
+ */
+open class VMException(message: String?) : Exception(message)
+
+/**
+ * Throws when [JavaVM] runs out of memory
+ */
+class VMOutOfMemoryException(message: String?) : VMException(message)
+
+/**
+ * Throws [Error] if the JNI call failed
+ *
+ * @throws OutOfMemoryError if [JNI_ENOMEM]
+ * @throws JNIError in other conditions
+ */
+fun JResult.succeedOrThr(message: String? = null) {
     this.ifFailed { result ->
         when (result) {
-            JNI_ENOMEM -> throw OutOfMemoryError("$message->JResult:${namedJResult[this]}")
-            else -> throw Error("$message->JResult:${namedJResult.getOrElse(this) { "$this" }}")
+            JNI_ENOMEM -> throw VMOutOfMemoryException(message)
+            else -> throw JNIError(result, message)
         }
     }
 }

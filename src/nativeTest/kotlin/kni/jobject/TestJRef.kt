@@ -7,35 +7,30 @@ import native.jni.JNIWeakGlobalRefType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class TestRefObj {
+class TestJRef {
     @Test
-    fun testGlobalObj() {
+    fun testGlobalRef() {
         with(TestVM.vm) {
             useEnv {
                 localFrame {
                     val strClz = JClass.findClass(this, "java/lang/String")
-                    strClz.getGlobalRef(this)
-                }.apply {
-                    assertEquals(JNIGlobalRefType, this.obj.getObjRefType(this@useEnv))
-
-                    localFrame {
-                        get(this@useEnv, false)!!
-                        getOrFree(this@useEnv, true)!!
-                    }
+                    strClz.ref.getGlobalRef(this)
+                }!!.apply {
+                    assertEquals(JNIGlobalRefType, getObjRefType(this@useEnv))
                 }
             }
         }
     }
 
     @Test
-    fun testWeakObj() {
+    fun testWeakRef() {
         with(TestVM.vm) {
             useEnv {
                 localFrame {
                     val strClz = JClass.findClass(this, "java/lang/String")
-                    strClz.getWeakRef(this)
-                }.apply {
-                    assertEquals(JNIWeakGlobalRefType, this.obj.getObjRefType(this@useEnv))
+                    strClz.ref.getWeakRef(this)
+                }!!.apply {
+                    assertEquals(JNIWeakGlobalRefType, getObjRefType(this@useEnv))
 
                     localFrame {
                         get(this@useEnv, false)!!

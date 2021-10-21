@@ -1,69 +1,60 @@
 package kni.jobject
 
 import kni.JEnv
+import kni.VMOutOfMemoryException
 import kni.toBoolean
 import kotlinx.cinterop.*
 import native.jni.jbooleanVar
-import native.jni.jobject
-import native.jni.jstring
 
 /**
- * Wrapper of [jstring]
+ * Instance of [kni.JavaVM] String
  */
-class JString(override val obj: jstring) : JObject(obj) {
+class JString(ref: JRef) : JObject(ref) {
     /**
-     * Gets the same type of wrapper for the new [jobject]
-     */
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : JObject> T.newRefTo(obj: jobject): T {
-        return JString(obj) as T
-    }
-
-    /**
-     * Get the length in bytes of the Modified UTF-8 representation of the [JString]
+     * Get the length in bytes of the String, in Modified UTF8 format
      */
     fun getByteLenMU8(env: JEnv): Int {
-        return env.nativeInf.GetStringUTFLength!!.invoke(env.internalEnv, obj)
+        return env.nativeInf.GetStringUTFLength!!.invoke(env.internalEnv, ref.obj)
     }
 
     /**
-     * Get the length of [JString]
+     * Get the length of the String
      */
     fun getLen(env: JEnv): Int {
-        return env.nativeInf.GetStringLength!!.invoke(env.internalEnv, obj)
+        return env.nativeInf.GetStringLength!!.invoke(env.internalEnv, ref.obj)
     }
 
     /**
-     * Get [JString] region, in Modified UTF-8 format
+     * Get String by region, in Modified UTF-8 format
      *
      * @param start start index of the region, inclusive
      * @param len the length of string to get start from the start index
      */
     fun getRegionMU8(env: JEnv, placement: NativePlacement, start: Int, len: Int): CArrayPointer<ByteVar> {
         val buf = placement.allocArray<ByteVar>(len)
-        env.nativeInf.GetStringUTFRegion!!.invoke(env.internalEnv, obj, start, len, buf)
+        env.nativeInf.GetStringUTFRegion!!.invoke(env.internalEnv, ref.obj, start, len, buf)
         return buf
     }
 
     /**
-     * Get [JString] region, in UTF-16 format
+     * Get String by region, in UTF-16 format
      *
      * @param start start index of the region, inclusive
      * @param len the length of string to get start from the start index
      */
     fun getRegion(env: JEnv, placement: NativePlacement, start: Int, len: Int): CArrayPointer<UShortVar> {
         val buf = placement.allocArray<UShortVar>(len)
-        env.nativeInf.GetStringRegion!!.invoke(env.internalEnv, obj, start, len, buf)
+        env.nativeInf.GetStringRegion!!.invoke(env.internalEnv, ref.obj, start, len, buf)
         return buf
     }
 
     /**
-     * Use [JString] in Modified UTF-8 format
+     * Use String in Modified UTF-8 format
      *
      * @param action CPointer<ByteVar>.(len: Int, copied: Boolean), pointer points to the string, len is the length
      * in bytes of the Modified UTF-8 representation of the string, copied indicates if the string has copied
      *
-     * @throws OutOfMemoryError when system runs out of memory, also a pending exception in VM
+     * @throws VMOutOfMemoryException
      */
     inline fun <R> useStrMU8(env: JEnv, action: CPointer<ByteVar>.(len: Int, copied: Boolean) -> R): R {
         val fGetStr = env.nativeInf.GetStringUTFChars!!
@@ -71,24 +62,24 @@ class JString(override val obj: jstring) : JObject(obj) {
 
         memScoped {
             val copied: jbooleanVar = this.alloc()
-            val jStr = fGetStr.invoke(env.internalEnv, obj, copied.ptr)
-                ?: throw OutOfMemoryError("Using MUTF-8 String")
+            val jStr = fGetStr.invoke(env.internalEnv, ref.obj, copied.ptr)
+                ?: throw VMOutOfMemoryException("Using MUTF-8 String")
             try {
                 return action(jStr, getByteLenMU8(env), copied.value.toBoolean())
             } finally {
-                fFreeStr.invoke(env.internalEnv, obj, jStr)
+                fFreeStr.invoke(env.internalEnv, ref.obj, jStr)
             }
         }
     }
 
     /**
-     * Use [JString] in UTF-16 format
+     * Use String in UTF-16 format
      *
      * @param critical if GetStringCritical
      * @param action CPointer<ByteVar>.(len: Int, copied: Boolean), pointer points to the string, len is the length
      * of the string, copied indicates if the string has copied
      *
-     * @throws OutOfMemoryError when system runs out of memory, also a pending exception in VM
+     * @throws VMOutOfMemoryException
      */
     inline fun <R> useStr(
         env: JEnv,
@@ -100,20 +91,18 @@ class JString(override val obj: jstring) : JObject(obj) {
 
         memScoped {
             val copied: jbooleanVar = this.alloc()
-            val jStr = fGetStr.invoke(env.internalEnv, obj, copied.ptr)
-                ?: throw OutOfMemoryError("Using UTF-16 String")
+            val jStr = fGetStr.invoke(env.internalEnv, ref.obj, copied.ptr)
+                ?: throw VMOutOfMemoryException("Using UTF-16 String")
             try {
                 return action(jStr, getLen(env), copied.value.toBoolean())
             } finally {
-                fFreeStr.invoke(env.internalEnv, obj, jStr)
+                fFreeStr.invoke(env.internalEnv, ref.obj, jStr)
             }
         }
     }
 
     /**
      * Convert [JString] to [String]
-     *
-     * @throws OutOfMemoryError when system runs out of memory, also a pending exception in VM
      */
     fun toKString(env: JEnv): String {
         return useStr(env, true) { len, _ -> toKStringFromUtf16ByLen(len) }
@@ -121,23 +110,18 @@ class JString(override val obj: jstring) : JObject(obj) {
 }
 
 /**
- * Convert [JObject] to [JString]
- */
-fun JObject.asJString(): JString {
-    return JString(obj)
-}
-
-/**
  * Convert Modified UTF-8 C string to [JString]
  *
- * @throws OutOfMemoryError when system runs out of memory, also a pending exception in VM
+ * @throws VMOutOfMemoryException
  */
 fun CPointer<ByteVar>.toJString(env: JEnv): JString {
     return JString(
-        env.nativeInf.NewStringUTF!!.invoke(
-            env.internalEnv,
-            this
-        ) ?: throw OutOfMemoryError("Converting Utf8 CString to JString")
+        JRefLocal(
+            env.nativeInf.NewStringUTF!!.invoke(
+                env.internalEnv,
+                this
+            ) ?: throw VMOutOfMemoryException("Converting Utf8 CString to JString")
+        )
     )
 }
 
@@ -146,22 +130,22 @@ fun CPointer<ByteVar>.toJString(env: JEnv): JString {
  *
  * @param len UTF-16 String length
  *
- * @throws OutOfMemoryError when system runs out of memory, also a pending exception in VM
+ * @throws VMOutOfMemoryException
  */
 fun CPointer<UShortVar>.toJString(env: JEnv, len: Int): JString {
     return JString(
-        env.nativeInf.NewString!!.invoke(
-            env.internalEnv,
-            this,
-            len
-        ) ?: throw OutOfMemoryError("Converting Unicode CString to JString")
+        JRefLocal(
+            env.nativeInf.NewString!!.invoke(
+                env.internalEnv,
+                this,
+                len
+            ) ?: throw VMOutOfMemoryException("Converting Unicode CString to JString")
+        )
     )
 }
 
 /**
  * Convert [String] to [JString]
- *
- * @throws OutOfMemoryError when system runs out of memory, also a pending exception in VM
  */
 fun String.toJString(env: JEnv): JString {
     memScoped {

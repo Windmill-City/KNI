@@ -14,24 +14,10 @@ import kotlin.test.assertFails
 
 class TestJArray {
     @Test
-    fun testCast() {
-        with(TestVM.vm) {
-            useEnv {
-                localFrame {
-                    with(JArray.arrayOf<jbyte>(this, 10)) {
-                        newRefTo(obj)
-                        asJArray()
-                    }
-                }
-            }
-        }
-    }
-
-    @Test
     fun testNewArr() {
         with(TestVM.vm) {
             useEnv {
-                JArray.arrayOf<jbyte>(this, 10).free(this)
+                JArray.arrayOf<jbyte>(this, 10).ref.free(this)
             }
         }
     }
@@ -59,22 +45,22 @@ class TestJArray {
                     strClz.arrayOf(this, 10, initialElement.toJString(this))
                         .apply {
                             fun checkStr(string: String, index: Int) {
-                                assertEquals(string, getAsObj(this@useEnv, index)!!.asJString().toKString(this@useEnv))
+                                assertEquals(string, JString(getRefAt(this@useEnv, index)!!).toKString(this@useEnv))
                             }
                             for (i in 0..9) checkStr(initialElement, i)
 
-                            setAsObj(this@useEnv, 0, eleToSet.toJString(this@useEnv))
+                            setRefAt(this@useEnv, 0, eleToSet.toJString(this@useEnv).ref)
                             checkStr(eleToSet, 0)
 
-                            setAsObj(this@useEnv, 1, null)
-                            assertEquals(null, getAsObj(this@useEnv, 1))
+                            setRefAt(this@useEnv, 1, null)
+                            assertEquals(null, getRefAt(this@useEnv, 1))
                         }
                 }
                 localFrame {
                     val strClz = JClass.findClass(this, "java/lang/String")
                     strClz.arrayOf(this, 10, null)
                         .apply {
-                            for (i in 0..9) assertEquals(null, getAsObj(this@useEnv, i))
+                            for (i in 0..9) assertEquals(null, getRefAt(this@useEnv, i))
                         }
                 }
             }
@@ -82,7 +68,7 @@ class TestJArray {
     }
 
     @Test
-    fun testUseAsObj() {
+    fun testUseRefAt() {
         with(TestVM.vm) {
             useEnv {
                 localFrame {
@@ -90,12 +76,12 @@ class TestJArray {
                     val initialElement = "InitElement"
                     strClz.arrayOf(this, 10, initialElement.toJString(this))
                         .apply {
-                            lateinit var obj: JObject
-                            useAsObj(this@useEnv, 0) { it, _ ->
-                                obj = it!!
-                                assertEquals(initialElement, it.asJString().toKString(this@useEnv))
+                            lateinit var ref: JRefLocal
+                            useRefAt(this@useEnv, 0) { it, _ ->
+                                ref = it!!
+                                assertEquals(initialElement, JString(it).toKString(this@useEnv))
                             }
-                            assertEquals(JNIInvalidRefType, obj.getObjRefType(this@useEnv))
+                            assertEquals(JNIInvalidRefType, ref.getObjRefType(this@useEnv))
                         }
                 }
             }
@@ -103,7 +89,7 @@ class TestJArray {
     }
 
     @Test
-    fun testOnEachAsObj() {
+    fun testOnEachRef() {
         with(TestVM.vm) {
             useEnv {
                 localFrame {
@@ -111,8 +97,8 @@ class TestJArray {
                     val initialElement = "InitElement"
                     strClz.arrayOf(this, 10, initialElement.toJString(this))
                         .apply {
-                            onEachAsObj(this@useEnv, 0..9) { it, _ ->
-                                assertEquals(initialElement, it!!.asJString().toKString(this@useEnv))
+                            onEachRef(this@useEnv, 0..9) { it, _ ->
+                                assertEquals(initialElement, JString(it!!).toKString(this@useEnv))
                             }
                         }
                 }
@@ -130,7 +116,7 @@ class TestJArray {
                             val arrToSet: CPointer<jbyteVar> = this@memScoped.allocArray(10)
                             for (i in 0..9) arrToSet[i] = i.toByte()
 
-                            setRegionAs<jbyte, jbyteVar>(this@useEnv, 0..9, arrToSet)
+                            setRegionOf<jbyte, jbyteVar>(this@useEnv, 0..9, arrToSet)
 
                             getRegionAs<jbyte, jbyteVar>(this@useEnv, this@memScoped, 0..9)
                                 .apply {

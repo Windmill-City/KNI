@@ -1,5 +1,6 @@
 package kni
 
+import kni.jobject.JRefLocal
 import kni.jobject.jclass.JClass
 import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
@@ -46,12 +47,7 @@ class TestJValue {
         checkConvert(0.030303f, jvalue::asFloat)
         checkConvert(0.030303, jvalue::asDouble)
 
-        TestVM.vm.useEnv {
-            localFrame {
-                val strClz = JClass.findClass(this, "java/lang/String")
-                assertTrue { strClz.isSameObj(this, strClz.asJValue().useContents { asJObject() }) }
-            }
-        }
+        //TODO:Test JObject/JRef
     }
 
     @Test
@@ -59,7 +55,7 @@ class TestJValue {
         arrayOfNulls<Any?>(16).apply {
             memScoped {
                 val array = this@apply.toJValues(this)
-                this@apply.onEachIndexed { i, it -> assertEquals(it, array[i].asJObject()) }
+                this@apply.onEachIndexed { i, it -> assertEquals(it, array[i].asJRef<JRefLocal>()) }
             }
         }
     }

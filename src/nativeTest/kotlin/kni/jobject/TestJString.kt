@@ -15,20 +15,6 @@ class TestJString {
     )
 
     @Test
-    fun testCast() {
-        with(TestVM.vm) {
-            useEnv {
-                localFrame {
-                    with("Test".toJString(this)) {
-                        newRefTo(obj)
-                        asJString()
-                    }
-                }
-            }
-        }
-    }
-
-    @Test
     fun testGetLen() {
         with(TestVM.vm) {
             useEnv {

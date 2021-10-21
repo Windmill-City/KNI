@@ -11,68 +11,62 @@ import native.jni.*
 typealias JArrReleaseMode = jint
 
 /**
- * Wrapper of [jarray]
+ * Instance of [JavaVM] Array
  */
-class JArray(override val obj: jarray) : JObject(obj) {
-    /**
-     * Gets the same type of wrapper for the new [jobject]
-     */
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : JObject> T.newRefTo(obj: jobject): T {
-        return JArray(obj) as T
-    }
-
+class JArray(ref: JRef) : JObject(ref) {
     /**
      * Get the length of the array
      */
     fun getLen(env: JEnv): Int {
-        return env.nativeInf.GetArrayLength!!.invoke(env.internalEnv, obj)
+        return env.nativeInf.GetArrayLength!!.invoke(env.internalEnv, ref.obj)
     }
 
     /**
-     * Get the object at [index]
+     * Get Object reference at [index]
      *
-     * @param index index of the object
+     * @param index index of the Object
+     * @return Object reference
      */
-    fun getAsObj(env: JEnv, index: Int): JObject? {
-        return env.nativeInf.GetObjectArrayElement!!.invoke(env.internalEnv, obj, index)?.let {
-            JObject(it)
+    fun getRefAt(env: JEnv, index: Int): JRefLocal? {
+        return env.nativeInf.GetObjectArrayElement!!.invoke(env.internalEnv, ref.obj, index)?.let {
+            JRefLocal(it)
         }
     }
 
     /**
-     * Set the object at [index]
+     * Set Object reference at [index]
      *
-     * @param index index of the object
+     * @param index index of the Object
+     * @param ref Object reference
      */
-    fun setAsObj(env: JEnv, index: Int, obj: JObject?) {
-        return env.nativeInf.SetObjectArrayElement!!.invoke(env.internalEnv, this.obj, index, obj?.obj)
+    fun setRefAt(env: JEnv, index: Int, ref: JRef?) {
+        return env.nativeInf.SetObjectArrayElement!!.invoke(env.internalEnv, this.ref.obj, index, ref?.obj)
     }
 
     /**
-     * Use object at specific index and free it after use
+     * Use Object reference at specific index and free it after use
      *
      * @param index object index
      */
-    inline fun <R> useAsObj(env: JEnv, index: Int, action: (JObject?, Int) -> R): R {
-        onEachAsObj(env, index..index) { obj, i ->
-            return action(obj, i)
+    inline fun <R> useRefAt(env: JEnv, index: Int, action: (JRefLocal?, Int) -> R): R {
+        onEachRef(env, index..index) { ref, i ->
+            return action(ref, i)
         }
         throw Error("Invalid index:$index")
     }
 
     /**
-     * Do action on objects in specific range
+     * Operate on each Object reference in specific range
      *
      * @param range operating range
      */
-    inline fun onEachAsObj(env: JEnv, range: IntRange, action: (JObject?, Int) -> Unit) {
+    inline fun onEachRef(env: JEnv, range: IntRange, action: (JRefLocal?, Int) -> Unit) {
         for (i in range) {
-            val obj = getAsObj(env, i)
+            val ref = getRefAt(env, i)
             try {
-                action(obj, i)
+                action(ref, i)
             } finally {
-                obj?.free(env)
+                ref?.free(env)
             }
         }
     }
@@ -101,7 +95,7 @@ class JArray(override val obj: jarray) : JObject(obj) {
             }.apply {
                 @Suppress("UNCHECKED_CAST")
                 (this as CPointer<CFunction<(CPointer<JNIEnvVar>, jarray, Int, Int, CPointer<CPrimitiveVar>) -> Unit>>)
-                    .invoke(env.internalEnv, obj, range.first, len, arr.reinterpret())
+                    .invoke(env.internalEnv, ref.obj, range.first, len, arr.reinterpret())
             }
         }
         return arr
@@ -110,7 +104,7 @@ class JArray(override val obj: jarray) : JObject(obj) {
     /**
      * Set primitive array of specific range
      */
-    inline fun <reified T, reified TVar : CPrimitiveVar> setRegionAs(env: JEnv, range: IntRange, buf: CPointer<TVar>) {
+    inline fun <reified T, reified TVar : CPrimitiveVar> setRegionOf(env: JEnv, range: IntRange, buf: CPointer<TVar>) {
         val len = range.last - range.first + 1
         buf.usePinned {
             when (T::class) {
@@ -126,7 +120,7 @@ class JArray(override val obj: jarray) : JObject(obj) {
             }.apply {
                 @Suppress("UNCHECKED_CAST")
                 (this as CPointer<CFunction<(CPointer<JNIEnvVar>, jarray, Int, Int, CPointer<CPrimitiveVar>) -> Unit>>)
-                    .invoke(env.internalEnv, obj, range.first, len, buf.reinterpret())
+                    .invoke(env.internalEnv, ref.obj, range.first, len, buf.reinterpret())
             }
         }
     }
@@ -181,7 +175,7 @@ class JArray(override val obj: jarray) : JObject(obj) {
                 val isCopied: jbooleanVar = this.alloc()
                 @Suppress("UNCHECKED_CAST") val arr =
                     (first as CPointer<CFunction<(CPointer<JNIEnvVar>, jarray, CPointer<jbooleanVar>) -> CPointer<CPrimitiveVar>?>>)
-                        .invoke(env.internalEnv, obj, isCopied.ptr)
+                        .invoke(env.internalEnv, ref.obj, isCopied.ptr)
                         ?: throw OutOfMemoryError("Using primitive array elements of type:${T::class.qualifiedName}")
                 val mode =
                     try {
@@ -191,7 +185,7 @@ class JArray(override val obj: jarray) : JObject(obj) {
                     }
                 @Suppress("UNCHECKED_CAST")
                 (second as CPointer<CFunction<(CPointer<JNIEnvVar>, jarray, CPointer<CPrimitiveVar>, JArrReleaseMode) -> Unit>>)
-                    .invoke(env.internalEnv, obj, arr, mode)
+                    .invoke(env.internalEnv, ref.obj, arr, mode)
             }
         }
     }
@@ -208,7 +202,7 @@ class JArray(override val obj: jarray) : JObject(obj) {
         val fFreeArr = env.nativeInf.ReleasePrimitiveArrayCritical!!
         memScoped {
             val isCopied: jbooleanVar = this.alloc()
-            val arr = fGetArr.invoke(env.internalEnv, obj, isCopied.ptr)
+            val arr = fGetArr.invoke(env.internalEnv, ref.obj, isCopied.ptr)
                 ?: throw OutOfMemoryError("Using primitive array elements of type:${TVar::class.qualifiedName}")
             val mode =
                 try {
@@ -216,7 +210,7 @@ class JArray(override val obj: jarray) : JObject(obj) {
                 } finally {
                     JNI_ABORT
                 }
-            fFreeArr(env.internalEnv, obj, arr, mode)
+            fFreeArr(env.internalEnv, ref.obj, arr, mode)
         }
     }
 
@@ -230,41 +224,36 @@ class JArray(override val obj: jarray) : JObject(obj) {
          */
         inline fun <reified T> arrayOf(env: JEnv, len: Int): JArray {
             return JArray(
-                when (T::class) {
-                    jboolean::class -> {
-                        env.nativeInf.NewBooleanArray!!.invoke(env.internalEnv, len)
-                    }
-                    jbyte::class -> {
-                        env.nativeInf.NewByteArray!!.invoke(env.internalEnv, len)
-                    }
-                    jchar::class -> {
-                        env.nativeInf.NewCharArray!!.invoke(env.internalEnv, len)
-                    }
-                    jshort::class -> {
-                        env.nativeInf.NewShortArray!!.invoke(env.internalEnv, len)
-                    }
-                    jint::class -> {
-                        env.nativeInf.NewIntArray!!.invoke(env.internalEnv, len)
-                    }
-                    jlong::class -> {
-                        env.nativeInf.NewLongArray!!.invoke(env.internalEnv, len)
-                    }
-                    jfloat::class -> {
-                        env.nativeInf.NewFloatArray!!.invoke(env.internalEnv, len)
-                    }
-                    jdouble::class -> {
-                        env.nativeInf.NewDoubleArray!!.invoke(env.internalEnv, len)
-                    }
-                    else -> throw IllegalArgumentException("Unsupported type:${T::class.qualifiedName}")
-                } ?: throw Error("Creating primitive array of type:${T::class.qualifiedName}")
+                JRefLocal(
+                    when (T::class) {
+                        jboolean::class -> {
+                            env.nativeInf.NewBooleanArray!!.invoke(env.internalEnv, len)
+                        }
+                        jbyte::class -> {
+                            env.nativeInf.NewByteArray!!.invoke(env.internalEnv, len)
+                        }
+                        jchar::class -> {
+                            env.nativeInf.NewCharArray!!.invoke(env.internalEnv, len)
+                        }
+                        jshort::class -> {
+                            env.nativeInf.NewShortArray!!.invoke(env.internalEnv, len)
+                        }
+                        jint::class -> {
+                            env.nativeInf.NewIntArray!!.invoke(env.internalEnv, len)
+                        }
+                        jlong::class -> {
+                            env.nativeInf.NewLongArray!!.invoke(env.internalEnv, len)
+                        }
+                        jfloat::class -> {
+                            env.nativeInf.NewFloatArray!!.invoke(env.internalEnv, len)
+                        }
+                        jdouble::class -> {
+                            env.nativeInf.NewDoubleArray!!.invoke(env.internalEnv, len)
+                        }
+                        else -> throw IllegalArgumentException("Unsupported type:${T::class.qualifiedName}")
+                    } ?: throw Error("Creating primitive array of type:${T::class.qualifiedName}")
+                )
             )
         }
     }
-}
-
-/**
- * Convert [JObject] to [JArray]
- */
-fun JObject.asJArray(): JArray {
-    return JArray(obj)
 }

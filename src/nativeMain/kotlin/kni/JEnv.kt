@@ -1,14 +1,16 @@
 package kni
 
+import kni.jobject.jclass.JClass
 import kotlinx.cinterop.*
 import native.jni.JNIEnvVar
 import native.jni.JNINativeInterface_
+import native.jni.JNINativeMethod
 import native.jni.JavaVMVar
 
 typealias InternalEnv = CPointer<JNIEnvVar>
 
 /**
- * Java Native Environment of specific thread
+ * Java Native Environment
  *
  * The JNI interface pointer (JNIEnv) is valid only in the current thread.
  *
@@ -19,14 +21,14 @@ class JEnv(val internalEnv: InternalEnv) {
     val nativeInf: JNINativeInterface_ = internalEnv.pointed.pointed!!
 
     /**
-     * Get the JNI Version of the interface
+     * Get the [JVersion]
      */
     fun getVersion(): JVersion {
         return nativeInf.GetVersion!!.invoke(internalEnv)
     }
 
     /**
-     * Get [JavaVM] of this [JEnv]
+     * Get [JavaVM]
      */
     fun getJavaVM(): JavaVM {
         memScoped {
@@ -37,12 +39,11 @@ class JEnv(val internalEnv: InternalEnv) {
     }
 
     /**
-     * Push in a local frame, local ref created in the frame will be freed after [popLocalFrame]
+     * Push in a local frame, local ref created in the frame will be freed when [popLocalFrame]
      *
-     * @param capacity ensure at least given number of local refs can be created,
-     * you can create more than it
+     * @param capacity ensure at least given number of local refs can be created
      *
-     * @throws OutOfMemoryError if system out of memory, also a pending exception in VM
+     * @throws VMOutOfMemoryException if system out of memory, also a pending exception in VM
      */
     fun pushLocalFrame(capacity: Int = 0) {
         nativeInf.PushLocalFrame!!.invoke(internalEnv, capacity)
@@ -59,11 +60,32 @@ class JEnv(val internalEnv: InternalEnv) {
     /**
      * Ensure at least given number of local refs can be created
      *
-     * @throws OutOfMemoryError if system out of memory, also a pending exception in VM
+     * @throws VMOutOfMemoryException if system out of memory, also a pending exception in VM
      */
     fun ensureLocalCapacity(capacity: Int) {
         nativeInf.EnsureLocalCapacity!!.invoke(internalEnv, capacity)
             .succeedOrThr("Ensure Capacity:$capacity")
+    }
+
+    /**
+     * Register native methods
+     *
+     * @param clz class to register method
+     * @param methods array of [JNINativeMethod]
+     * @param len array length of the [methods]
+     */
+    fun registerNatives(clz: JClass, methods: CPointer<JNINativeMethod>, len: Int) {
+        nativeInf.RegisterNatives!!.invoke(internalEnv, clz.ref.obj, methods, len)
+            .succeedOrThr("Registering native methods")
+    }
+
+    /**
+     * Unregister native method
+     *
+     * @param clz class to unregister method
+     */
+    fun unregisterNatives(clz: JClass) {
+        nativeInf.UnregisterNatives!!.invoke(internalEnv, clz.ref.obj).succeedOrThr("Unregistering native methods")
     }
 
     /**
@@ -79,14 +101,7 @@ class JEnv(val internalEnv: InternalEnv) {
     /**
      * Local frame scope
      *
-     * VM doesn't aware the return of sub-calls, so if you get the object ref from VM in sub-calls,
-     * the ref won't be freed until the root method returns to VM.
-     *
-     * To solve this problem, we push in a local frame before calling any sub-calls,
-     * and then pop it up after returning, so that unused refs can be freed.
-     *
      * @see JEnv.pushLocalFrame
-     * @throws OutOfMemoryError when system runs out of memory
      */
     inline fun <R> localFrame(capacity: Int = 0, action: () -> R): R {
         pushLocalFrame(capacity)
