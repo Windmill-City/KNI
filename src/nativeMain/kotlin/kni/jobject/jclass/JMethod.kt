@@ -18,7 +18,7 @@ import native.jni.jmethodID
  * @param dsc method descriptor
  * @param isStatic is method static?
  */
-class JMethod(
+data class JMethod(
     val id: jmethodID, val name: String, val dsc: JDescriptor,
     override val isStatic: Boolean
 ) : IJClassMember {

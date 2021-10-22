@@ -16,7 +16,7 @@ import native.jni.jfieldID
  * @param dsc field descriptor
  * @param isStatic is field static?
  */
-class JField(
+data class JField(
     val id: jfieldID, val name: String, val dsc: JDescriptor,
     override val isStatic: Boolean
 ) : IJClassMember {

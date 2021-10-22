@@ -103,7 +103,7 @@ class JClass(ref: JRef) : JObject(ref) {
                         ref.obj,
                         ctor.id,
                         args.toJValues(this)
-                    ) ?: throw VMException("Creating new obj with ctor:${ctor.name}${ctor.dsc}@${ctor.id}")
+                    ) ?: throw VMException("Creating new obj with ctor:$ctor")
                 )
             )
         }
