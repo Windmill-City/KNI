@@ -55,8 +55,8 @@ kotlin {
                 name = "GithubPackages"
                 url = uri("https://maven.pkg.github.com/Windmill-City/KNI")
                 credentials {
-                    username = properties["gpr.user"]?.toString() ?: System.getenv("USERNAME")
-                    password = properties["gpr.key"]?.toString() ?: System.getenv("TOKEN_PUBLISH_PKG")
+                    username = properties["gpr.user"]?.toString() ?: System.getenv("GITHUB_USERNAME")
+                    password = properties["gpr.key"]?.toString() ?: System.getenv("GITHUB_TOKEN_PUBLISH_PKG")
                 }
             }
         }
