@@ -1,9 +1,7 @@
 package kni.jobject
 
 import kni.TestVM
-import kni.jobject.jclass.JClass
 import kotlinx.cinterop.*
-import native.jni.JNIInvalidRefType
 import native.jni.JNI_OK
 import native.jni.jbyte
 import native.jni.jbyteVar
@@ -17,7 +15,7 @@ class TestJArray {
     fun testNewArr() {
         with(TestVM.vm) {
             useEnv {
-                JArray.arrayOf<jbyte>(this, 10).ref.free(this)
+                arrayOf<jbyte>(10).ref.free()
             }
         }
     }
@@ -27,8 +25,8 @@ class TestJArray {
         with(TestVM.vm) {
             useEnv {
                 localFrame {
-                    val arr = JArray.arrayOf<jbyte>(this, 10)
-                    assertEquals(10, arr.getLen(this))
+                    val arr = arrayOf<jbyte>(10)
+                    assertEquals(10, arr.getLen())
                 }
             }
         }
@@ -39,10 +37,10 @@ class TestJArray {
         with(TestVM.vm) {
             useEnv {
                 localFrame {
-                    val strClz = JClass.findClass(this, "java/lang/String")
+                    val strClz = findClass("java/lang/String")
                     val initialElement = "ObjArrayElement"
                     val eleToSet = "ObjArrayElementToSet"
-                    strClz.arrayOf(this, 10, initialElement.toJString(this))
+                    strClz.arrayOf(10, initialElement.toJString())
                         .apply {
                             fun checkStr(string: String, index: Int) {
                                 assertEquals(string, JString(getRefAt(index)!!).toKString())
@@ -57,8 +55,8 @@ class TestJArray {
                         }
                 }
                 localFrame {
-                    val strClz = JClass.findClass(this, "java/lang/String")
-                    strClz.arrayOf(this, 10, null)
+                    val strClz = findClass("java/lang/String")
+                    strClz.arrayOf(10, null)
                         .apply {
                             for (i in 0..9) assertEquals(null, getRefAt(i))
                         }
@@ -72,16 +70,13 @@ class TestJArray {
         with(TestVM.vm) {
             useEnv {
                 localFrame {
-                    val strClz = JClass.findClass(this, "java/lang/String")
+                    val strClz = findClass("java/lang/String")
                     val initialElement = "InitElement"
-                    strClz.arrayOf(this, 10, initialElement.toJString(this))
+                    strClz.arrayOf(10, initialElement.toJString())
                         .apply {
-                            lateinit var ref: JRefLocal
                             useRefAt(0) { it, _ ->
-                                ref = it!!
-                                assertEquals(initialElement, JString(it).toKString())
+                                assertEquals(initialElement, JString(it!!).toKString())
                             }
-                            assertEquals(JNIInvalidRefType, ref.getObjRefType())
                         }
                 }
             }
@@ -93,9 +88,9 @@ class TestJArray {
         with(TestVM.vm) {
             useEnv {
                 localFrame {
-                    val strClz = JClass.findClass(this, "java/lang/String")
+                    val strClz = findClass("java/lang/String")
                     val initialElement = "InitElement"
-                    strClz.arrayOf(this, 10, initialElement.toJString(this))
+                    strClz.arrayOf(10, initialElement.toJString())
                         .apply {
                             onEachRef(0..9) { it, _ ->
                                 assertEquals(initialElement, JString(it!!).toKString())

@@ -45,7 +45,7 @@ kotlin {
         val nativeMain by getting
         val nativeTest by getting {
             //Set the working path to where the jvm library locates, or cause failure in JavaVM.create
-            tasks["nativeTest"].setProperty("workingDir", "${System.getenv("JAVA_HOME")}/bin/default")
+            tasks["nativeTest"].setProperty("workingDir", "${System.getenv("JAVA_HOME")}/bin/server")
         }
     }
 
