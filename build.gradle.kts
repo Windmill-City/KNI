@@ -1,7 +1,8 @@
 @file:Suppress("UNUSED_VARIABLE")
 
 plugins {
-    kotlin("multiplatform") version "1.5.30"
+    kotlin("multiplatform") version "1.5.31"
+    `maven-publish`
 }
 
 group = "city.windmill"
@@ -21,7 +22,7 @@ kotlin {
         else -> throw GradleException("Host OS is not supported in Kotlin/Native.")
     }
 
-    val jni by nativeTarget.compilations.getByName("main").cinterops.creating {
+    nativeTarget.compilations.getByName("main").cinterops.create("jni") {
         defFile(project.file("src/nativeMain/resources/jni/jni.def"))
         headers(
             project.files(
@@ -45,6 +46,19 @@ kotlin {
         val nativeTest by getting {
             //Set the working path to where the jvm library locates, or cause failure in JavaVM.create
             tasks["nativeTest"].setProperty("workingDir", "${System.getenv("JAVA_HOME")}/bin/default")
+        }
+    }
+
+    publishing {
+        repositories {
+            maven {
+                name = "GithubPackages"
+                url = uri("https://maven.pkg.github.com/Windmill-City/KNI")
+                credentials {
+                    username = properties["gpr.user"]?.toString() ?: System.getenv("USERNAME")
+                    password = properties["gpr.key"]?.toString() ?: System.getenv("TOKEN_PUBLISH_PKG")
+                }
+            }
         }
     }
 }
