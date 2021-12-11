@@ -20,7 +20,7 @@ class TestJString {
             useEnv {
                 fun checkByteLenMU8(string: String) {
                     localFrame {
-                        string.toJString(this).getByteLenMU8(this).apply {
+                        string.toJString().getByteLenMU8().apply {
                             assertEquals(string.mutf8.size - 1, this)
                         }
                     }
@@ -28,7 +28,7 @@ class TestJString {
 
                 fun checkLenU16(string: String) {
                     localFrame {
-                        string.toJString(this).getLen(this).apply {
+                        string.toJString().getLen().apply {
                             assertEquals(string.length, this)
                         }
                     }
@@ -50,8 +50,8 @@ class TestJString {
                     memScoped {
                         localFrame {
                             val len = range.last - range.first + 1
-                            string.toJString(this@useEnv)
-                                .getRegion(this@useEnv, this, range.first, len)
+                            string.toJString()
+                                .getRegion(this, range.first, len)
                                 .toKStringFromUtf16ByLen(len)
                                 .apply { assertEquals(string.substring(range), this) }
                         }
@@ -62,8 +62,8 @@ class TestJString {
                     memScoped {
                         localFrame {
                             val len = range.last - range.first + 1
-                            string.toJString(this@useEnv)
-                                .getRegionMU8(this@useEnv, this, range.first, len)
+                            string.toJString()
+                                .getRegionMU8(this, range.first, len)
                                 .toKStringFromMUtf8()
                                 .apply { assertEquals(string.substring(range), this) }
                         }
@@ -137,7 +137,7 @@ class TestJString {
             useEnv {
                 fun checkJString(string: String) {
                     localFrame {
-                        string.toJString(this).toKString(this)
+                        string.toJString().toKString()
                             .apply { assertEquals(string, this) }
                     }
                 }
@@ -145,7 +145,7 @@ class TestJString {
                 fun checkJStringMU8(string: String) {
                     localFrame {
                         memScoped {
-                            string.mutf8.getPointer(this).toJString(this@useEnv).toKString(this@useEnv)
+                            string.mutf8.getPointer(this).toJString().toKString()
                                 .apply { assertEquals(string, this) }
                         }
                     }

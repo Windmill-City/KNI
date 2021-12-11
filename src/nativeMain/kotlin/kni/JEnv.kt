@@ -261,6 +261,23 @@ class JEnv(val internalEnv: InternalEnv) {
     }
 
     /**
+     * Get [JRefLocal] of the object, or null if it has been freed
+     *
+     * @param autoFree should [free] the ref after [get]?
+     */
+    fun JRefWeak.get(autoFree: Boolean = false): JRefLocal? {
+        return this.get(this@JEnv, autoFree)
+    }
+
+    /**
+     * Get the [JRefLocal] of the object, or free this ref if the object has been freed
+     * @see get
+     */
+    fun JRefWeak.getOrFree(autoFree: Boolean = false): JRefLocal? {
+        return this.getOrFree(this@JEnv, autoFree)
+    }
+
+    /**
      * Get Object class
      */
     fun JObject.getClass(): JClass {

@@ -1,7 +1,6 @@
 package kni.jobject
 
 import kni.TestVM
-import kni.jobject.jclass.JClass
 import native.jni.JNIGlobalRefType
 import native.jni.JNIWeakGlobalRefType
 import kotlin.test.Test
@@ -13,10 +12,10 @@ class TestJRef {
         with(TestVM.vm) {
             useEnv {
                 localFrame {
-                    val strClz = JClass.findClass(this, "java/lang/String")
-                    strClz.ref.getGlobalRef(this)
+                    val strClz = findClass("java/lang/String")
+                    strClz.ref.getGlobalRef()
                 }!!.apply {
-                    assertEquals(JNIGlobalRefType, getObjRefType(this@useEnv))
+                    assertEquals(JNIGlobalRefType, getObjRefType())
                 }
             }
         }
@@ -27,14 +26,14 @@ class TestJRef {
         with(TestVM.vm) {
             useEnv {
                 localFrame {
-                    val strClz = JClass.findClass(this, "java/lang/String")
-                    strClz.ref.getWeakRef(this)
+                    val strClz = findClass("java/lang/String")
+                    strClz.ref.getWeakRef()
                 }!!.apply {
-                    assertEquals(JNIWeakGlobalRefType, getObjRefType(this@useEnv))
+                    assertEquals(JNIWeakGlobalRefType, getObjRefType())
 
                     localFrame {
-                        get(this@useEnv, false)!!
-                        getOrFree(this@useEnv, true)!!
+                        get(false)!!
+                        getOrFree(true)!!
                     }
                 }
             }
